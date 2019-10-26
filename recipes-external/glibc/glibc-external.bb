@@ -197,6 +197,9 @@ FILES_${PN} += "\
     ${datadir}/i18n \
 "
 
+FILES_${PN}-bin = ""
+FILES_${PN}_remove = "/usr/libexec/*"
+
 FILES_${PN}-dev_remove := "${datadir}/aclocal"
 
 FILES_${PN}-dev_remove = "/lib/*.o"
