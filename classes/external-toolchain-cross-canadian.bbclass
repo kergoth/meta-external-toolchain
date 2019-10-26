@@ -10,6 +10,8 @@ PACKAGE_DEPENDS_remove = "virtual/${TARGET_PREFIX}binutils"
 # Scan just toolchains root directory, but include some additional mirrors
 EXTERNAL_INSTALL_SOURCE_PATHS = "${EXTERNAL_TOOLCHAIN}"
 FILES_MIRRORS += "\
+    /|${EXTERNAL_TOOLCHAIN_SYSROOT_NATIVE}/ \
+    ${bindir}/|${EXTERNAL_TOOLCHAIN_BIN}/ \
     ${bindir}/|/bin/\n \
     ${libdir}/|/lib/\n \
     ${libexecdir}/|/libexec/\n \
