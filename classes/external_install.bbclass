@@ -43,27 +43,29 @@ fakeroot python do_install_external() {
 }
 do_install_external[cleandirs] = "${D}"
 do_install_external[depends] += "virtual/fakeroot-native:do_populate_sysroot"
-addtask do_install_external before do_install
 
 python () {
-    d.setVar('do_install', ':')
-    d.setVarFlag('do_install', 'deps', ['do_install_external'])
-    d.delVarFlag('do_install', 'python')
-    d.delVarFlag('do_install', 'cleandirs')
+    if d.getVar('TCMODE_EXTERNAL') == '1':
+        d.setVar('do_install', ':')
+        d.setVarFlag('do_install', 'deps', ['do_install_external'])
+        d.delVarFlag('do_install', 'python')
+        d.delVarFlag('do_install', 'cleandirs')
 
-    # flags = d.getVarFlags('do_install')
-    # extflags = d.getVarFlags('do_install_external')
-    # del extflags['deps']
-    # flags.update(extflags)
-    # d.delVar('do_install')
-    # d.setVar('do_install', d.getVar('do_install_external'))
-    # d.setVarFlags('do_install', flags)
+        bb.build.addtask('do_install_external', 'do_install', '', d)
 
-    # d.setVarFlag('do_install', 'deps', [])
-    # bb.warn(repr(d.getVarFlags('do_install')))
-    # bb.build.deltask('do_install', d)
-    # bb.build.addtask('do_install', 'do_package do_populate_sysroot', '', d)
+        # flags = d.getVarFlags('do_install')
+        # extflags = d.getVarFlags('do_install_external')
+        # del extflags['deps']
+        # flags.update(extflags)
+        # d.delVar('do_install')
+        # d.setVar('do_install', d.getVar('do_install_external'))
+        # d.setVarFlags('do_install', flags)
 
-    bb.build.deltask('do_populate_lic', d)
-    bb.build.addtask('do_populate_lic', 'do_build', '', d)
+        # d.setVarFlag('do_install', 'deps', [])
+        # bb.warn(repr(d.getVarFlags('do_install')))
+        # bb.build.deltask('do_install', d)
+        # bb.build.addtask('do_install', 'do_package do_populate_sysroot', '', d)
+
+        bb.build.deltask('do_populate_lic', d)
+        bb.build.addtask('do_populate_lic', 'do_build', '', d)
 }

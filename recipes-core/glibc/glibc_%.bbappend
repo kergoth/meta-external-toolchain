@@ -14,10 +14,10 @@ DEPENDS_append_tcmode-external = " libgcc"
 # glibc may need libssp for -fstack-protector builds
 #do_packagedata[depends] += "gcc-runtime:do_packagedata"
 
-stash_locale_cleanup () {
+stash_locale_cleanup_tcmode-external () {
     :
 }
 
-do_stash_locale () {
+do_stash_locale_tcmode-external () {
     :
 }

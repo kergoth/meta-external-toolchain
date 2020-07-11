@@ -1,7 +1,7 @@
 inherit external
 
-INHIBIT_DEFAULT_DEPS = "1"
-DEPENDS = ""
+INHIBIT_DEFAULT_DEPS_tcmode-external = "1"
+DEPENDS_tcmode-external = ""
 
 EXTERNAL_CROSS_BINARIES ?= ""
 
@@ -17,7 +17,7 @@ wrap_bin () {
     chmod +x "$script"
 }
 
-do_install () {
+do_install_tcmode-external () {
     bbwarn 'external_cross_do_install'
     install -d ${D}${bindir}
     for bin in ${EXTERNAL_CROSS_BINARIES}; do

@@ -45,6 +45,9 @@ INSANE_SKIP_${PN}_append_tcmode-external = " build-deps"
 
 RECIPEFILES_DIR ?= "${TOPDIR}/recipefiles"
 
+TCMODE_EXTERNAL = ""
+TCMODE_EXTERNAL_tcmode-external = "1"
+
 def read_files_from_pkgdata(pkgdatafile, long=False):
     import json
     with open(pkgdatafile, 'r') as f:
@@ -128,12 +131,14 @@ EXCLUDED_EXTERNAL_FILES += "\
 "
 
 # Packaging requires objcopy/etc for split and strip
-PACKAGE_DEPENDS += "virtual/${MLPREFIX}${TARGET_PREFIX}binutils"
+PACKAGE_DEPENDS_append_tcmode-external = " virtual/${MLPREFIX}${TARGET_PREFIX}binutils"
 
-do_fetch[noexec] = "1"
-do_unpack[noexec] = "1"
-do_patch[noexec] = "1"
-do_configure[noexec] = "1"
-do_compile[noexec] = "1"
+NOEXEC_TASKS = ""
+NOEXEC_TASKS_tcmode-external = "do_fetch do_unpack do_patch do_configure do_compile"
 
-COMPILERDEP = ""
+python () {
+    for task in d.getVar('NOEXEC_TASKS').split():
+        d.setVarFlag(task, 'noexec', '1')
+}
+
+COMPILERDEP_tcmode-external = ""
