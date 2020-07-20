@@ -81,7 +81,7 @@ def external_run(d, *args):
             not d.getVar('EXTERNAL_TOOLCHAIN', True)):
         return 'UNKNOWN'
 
-    sys.path.append(os.path.join(d.getVar('LAYERDIR_external-toolchain', True), 'lib'))
+    sys.path.append(os.path.join(d.getVar('LAYERDIR_meta-external', True), 'lib'))
     import oe.external
     return oe.external.run(d, *args)
 

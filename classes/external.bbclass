@@ -24,15 +24,64 @@
 # LIC_FILES_CHKSUM, so use the license from common-licenses
 inherit common_license
 
-#PV .= "-external"
+# Save files lists for recipes
+inherit recipefiles
 
-COMMON_LIC_CHKSUM_MIT = "file://${COREBASE}/meta/files/common-licenses/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+PACKAGESPLITFUNCS_prepend = "external_systemd_adjust "
+
+python external_systemd_adjust () {
+    if not bb.utils.contains('DISTRO_FEATURES', 'systemd', True, False, d):
+        return
+    if not bb.data.inherits_class('systemd', d):
+        return
+    systemd_packages = d.getVar('SYSTEMD_PACKAGES')
+    if not systemd_packages:
+        return
+
+    def get_package_var(d, var, pkg):
+        val = (d.getVar('%s_%s' % (var, pkg)) or "").strip()
+        if val == "":
+            val = (d.getVar(var) or "").strip()
+        return val
+
+    searchpaths = [oe.path.join(d.getVar("sysconfdir"), "systemd", "system"),]
+    searchpaths.append(d.getVar("systemd_system_unitdir"))
+
+    for pkg_systemd in systemd_packages.split():
+        for service in get_package_var(d, 'SYSTEMD_SERVICE', pkg_systemd).split():
+            # Deal with adding, for example, 'ifplugd@eth0.service' from
+            # 'ifplugd@.service'
+            base = None
+            at = service.find('@')
+            if at != -1:
+                ext = service.rfind('.')
+                base = service[:at] + '@' + service[ext:]
+
+            for path in searchpaths:
+                if os.path.exists(oe.path.join(d.getVar("D"), path, service)):
+                    break
+                elif base is not None:
+                    if os.path.exists(oe.path.join(d.getVar("D"), path, base)):
+                        break
+            else:
+                d.delVar('SYSTEMD_SERVICE_%s' % pkg_systemd)
+}
+
+RECIPEFILES_DIR ?= "${EXTERNAL_TOOLCHAIN}/recipefiles"
+
+EXTERNAL_ENABLED = ""
+EXTERNAL_ENABLED_tcmode-external = "1"
+
+PR_append_tcmode-external = ".external"
 
 LIC_FILES_CHKSUM_tcmode-external = "${COMMON_LIC_CHKSUM}"
 
 # We don't extract anything which will create S, and we don't want to see the
 # warning about it
 S_tcmode-external = "${WORKDIR}"
+
+# Exclude default sources
+SRC_URI_tcmode-external = ""
 
 # Toolchain shipped binaries weren't necessarily built ideally
 INSANE_SKIP_${PN}_append_tcmode-external = " ldflags textrel"
@@ -42,11 +91,6 @@ INSANE_SKIP_${PN}_append_tcmode-external = " already-stripped"
 
 # Missing build deps don't matter when we don't build anything
 INSANE_SKIP_${PN}_append_tcmode-external = " build-deps"
-
-RECIPEFILES_DIR ?= "${TOPDIR}/recipefiles"
-
-TCMODE_EXTERNAL = ""
-TCMODE_EXTERNAL_tcmode-external = "1"
 
 def read_files_from_pkgdata(pkgdatafile, long=False):
     import json
@@ -73,55 +117,6 @@ def import_from_filename(module_name, file_path):
     sys.modules[module_name] = module
     return module
 
-def write_recipefiles_for_pkgs(pkglist, pkgdata_dir, filename):
-    from pathlib import Path
-
-    pkgdata_dir = Path(pkgdata_dir)
-    allfiles = set()
-    for pkg in pkglist:
-        pkgdatafile = pkgdata_dir / 'runtime' / pkg
-        allfiles |= set(read_files_from_pkgdata(pkgdatafile))
-
-    outfile = Path(filename)
-    outfile.parent.mkdir(parents=True, exist_ok=True)
-    with outfile.open('w') as f:
-        f.writelines(f + '\n' for f in sorted(allfiles))
-
-python do_save_recipefiles () {
-    import pathlib
-
-    if not d.getVar('PACKAGES').strip():
-        return
-
-    utilpath = bb.utils.which(os.getenv('PATH'), 'oe-pkgdata-util')
-    if not utilpath:
-        bb.fatal('No oe-pkgdata-util found')
-    oe_pkgdata_util = import_from_filename('oe_pkgdata_util', utilpath)
-
-    pkgdata_dir = d.getVar('PKGDATA_DIR')
-    pn = d.getVar('PN')
-    recipefiles_dir = pathlib.Path(d.getVar('RECIPEFILES_DIR'))
-    recipefiles = (recipefiles_dir / pn).with_suffix('.files')
-
-    pkglist = oe_pkgdata_util.get_recipe_pkgs(pkgdata_dir, pn, unpackaged=False)
-    write_recipefiles_for_pkgs(pkglist, pkgdata_dir, recipefiles)
-}
-addtask do_save_recipefiles after do_packagedata
-
-def load_recipefiles(d):
-    from pathlib import Path
-
-    recipefiles_dir = Path(d.getVar('RECIPEFILES_DIR'))
-    pn = d.getVar('PN')
-    recipefiles_path = recipefiles_dir / Path(pn).with_suffix('.files')
-    try:
-        contents = recipefiles_path.read_text()
-    except FileNotFoundError:
-        bb.fatal('{}: file not found'.format(recipefiles_path))
-    else:
-        files = contents.splitlines()
-    return files
-
 EXCLUDED_EXTERNAL_FILES += "\
     ${sysconfdir}/default/volatiles \
 "
@@ -134,7 +129,7 @@ EXCLUDED_EXTERNAL_FILES += "\
 PACKAGE_DEPENDS_append_tcmode-external = " virtual/${MLPREFIX}${TARGET_PREFIX}binutils"
 
 NOEXEC_TASKS = ""
-NOEXEC_TASKS_tcmode-external = "do_fetch do_unpack do_patch do_configure do_compile"
+NOEXEC_TASKS_tcmode-external = "do_patch do_configure do_compile"
 
 python () {
     for task in d.getVar('NOEXEC_TASKS').split():

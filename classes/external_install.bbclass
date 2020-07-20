@@ -16,6 +16,9 @@ python external_install () {
     excluded_patterns = [re.compile(p.strip()) for p in excluded]
 
     sysroot = Path(d.getVar('EXTERNAL_TOOLCHAIN_SYSROOT'))
+    if sysroot == 'UNKNOWN':
+        bb.fatal('EXTERNAL_TOOLCHAIN_SYSROOT is UNKNOWN. Please configure or use a supported toolchain.')
+
     dest = Path(d.getVar('D'))
     for dirname, files in by_dirname.items():
         args = []
@@ -45,8 +48,8 @@ do_install_external[cleandirs] = "${D}"
 do_install_external[depends] += "virtual/fakeroot-native:do_populate_sysroot"
 
 python () {
-    if d.getVar('TCMODE_EXTERNAL') == '1':
-        d.setVar('do_install', ':')
+    if d.getVar('EXTERNAL_ENABLED') == '1':
+        d.setVar('do_install', '')
         d.setVarFlag('do_install', 'deps', ['do_install_external'])
         d.delVarFlag('do_install', 'python')
         d.delVarFlag('do_install', 'cleandirs')

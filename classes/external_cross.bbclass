@@ -18,14 +18,12 @@ wrap_bin () {
 }
 
 do_install_tcmode-external () {
-    bbwarn 'external_cross_do_install'
     install -d ${D}${bindir}
     for bin in ${EXTERNAL_CROSS_BINARIES}; do
         if [ ! -e "${EXTERNAL_TOOLCHAIN_BIN}/${EXTERNAL_TARGET_SYS}-$bin" ]; then
             continue
         fi
 
-        bbwarn wrap_bin "$bin"
         wrap_bin "$bin"
     done
 }

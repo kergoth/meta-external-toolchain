@@ -9,7 +9,7 @@ do_gcc_stash_builddir_tcmode-external () {
 }
 
 python () {
-    if d.getVar('TCMODE_EXTERNAL') == '1':
+    if d.getVar('EXTERNAL_ENABLED') == '1':
         lic_deps = d.getVarFlag('do_populate_lic', 'depends', False)
         d.setVarFlag('do_populate_lic', 'depends', lic_deps.replace('gcc-source-${PV}:do_unpack', ''))
         cfg_deps = d.getVarFlag('do_configure', 'depends', False)
