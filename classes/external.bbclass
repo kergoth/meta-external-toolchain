@@ -27,6 +27,9 @@ inherit common_license
 # Save files lists for recipes
 inherit recipefiles
 
+# Disable systemd service files which we don't have. This generally occurs when
+# a recipe emits binary packages which include service files, but those packages
+# aren't included in the particular sdk we're using.
 PACKAGESPLITFUNCS_prepend = "external_systemd_adjust "
 
 python external_systemd_adjust () {
@@ -64,7 +67,8 @@ python external_systemd_adjust () {
                     if os.path.exists(oe.path.join(d.getVar("D"), path, base)):
                         break
             else:
-                d.delVar('SYSTEMD_SERVICE_%s' % pkg_systemd)
+                d.setVar('SYSTEMD_SERVICE_%s_remove' % pkg_systemd, service)
+                d.setVar('SYSTEMD_SERVICE_remove', service)
 }
 
 RECIPEFILES_DIR ?= "${EXTERNAL_TOOLCHAIN}/recipefiles"
@@ -82,6 +86,7 @@ S_tcmode-external = "${WORKDIR}"
 
 # Exclude default sources
 SRC_URI_tcmode-external = ""
+SRCPV_tcmode-external = ""
 
 # Toolchain shipped binaries weren't necessarily built ideally
 INSANE_SKIP_${PN}_append_tcmode-external = " ldflags textrel"
@@ -136,4 +141,5 @@ python () {
         d.setVarFlag(task, 'noexec', '1')
 }
 
+# We don't want to interact with the gcc stashed builddir
 COMPILERDEP_tcmode-external = ""

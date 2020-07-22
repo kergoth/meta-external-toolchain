@@ -45,16 +45,20 @@ fakeroot python do_install_external() {
         bb.build.exec_func('do_install_extra', d)
 }
 do_install_external[cleandirs] = "${D}"
-do_install_external[depends] += "virtual/fakeroot-native:do_populate_sysroot"
+do_install[depends] += "virtual/fakeroot-native:do_populate_sysroot"
 
 python () {
     if d.getVar('EXTERNAL_ENABLED') == '1':
-        d.setVar('do_install', '')
-        d.setVarFlag('do_install', 'deps', ['do_install_external'])
-        d.delVarFlag('do_install', 'python')
-        d.delVarFlag('do_install', 'cleandirs')
+        d.setVar('do_install', d.getVar('do_install_external', False))
+        d.setVarFlag('do_install', 'deps', [])
+        d.setVarFlag('do_install', 'python', '1')
 
-        bb.build.addtask('do_install_external', 'do_install', '', d)
+        # We aren't building or configuring, but we don't want to completely disable DEPENDS or sysroot availability
+        # This does mean the existing DEPENDS will be obeyed even though we need none of it, however.
+        #bb.build.addtask('do_install', '', 'do_prepare_recipe_sysroot', d)
+        #d.delVarFlag('do_install', 'cleandirs')
+
+        #bb.build.addtask('do_install_external', 'do_install', '', d)
 
         # flags = d.getVarFlags('do_install')
         # extflags = d.getVarFlags('do_install_external')
@@ -69,6 +73,6 @@ python () {
         # bb.build.deltask('do_install', d)
         # bb.build.addtask('do_install', 'do_package do_populate_sysroot', '', d)
 
-        bb.build.deltask('do_populate_lic', d)
-        bb.build.addtask('do_populate_lic', 'do_build', '', d)
+        #bb.build.deltask('do_populate_lic', d)
+        #bb.build.addtask('do_populate_lic', 'do_build', '', d)
 }

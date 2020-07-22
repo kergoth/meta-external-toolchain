@@ -1,3 +1,6 @@
+# Pull this in explicitly rather than via compilerlibs/gcc-runtime's DEPENDS
+BASE_DEFAULT_DEPS_append_tcmode-external_class-target = " libgcc"
+
 def fixed_oe_import(d, modules=None):
     import importlib
     import sys
