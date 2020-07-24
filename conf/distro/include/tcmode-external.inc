@@ -16,6 +16,13 @@ EXTERNAL_TOOLCHAIN[vardepvalue] = "${EXTERNAL_TOOLCHAIN}"
 #   use-files-mirrors: check alternate paths for files using defined mirrors
 EXTERNAL_TOOLCHAIN_FEATURES ??= ""
 
+# Pull this in explicitly rather than via compilerlibs/gcc-runtime's DEPENDS
+BASE_DEFAULT_DEPS_append_tcmode-external_class-target = " libgcc"
+# Pull this in explicitly rather than via the libc's DEPENDS
+BASE_DEFAULT_DEPS_append_tcmode-external_class-target = " linux-libc-headers"
+# Pull this in explicitly rather than via gcc
+BASE_DEFAULT_DEPS_append_tcmode-external_class-target = " virtual/${TARGET_PREFIX}binutils"
+
 python () {
     oe.utils.features_backfill("EXTERNAL_TOOLCHAIN_FEATURES", d)
 }

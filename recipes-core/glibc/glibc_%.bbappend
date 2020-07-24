@@ -1,8 +1,6 @@
 inherit external_install
 
-# FILESEXTRAPATHS_prepend := "${THISDIR}/${BPN}:"
-# SRC_URI_tcmode-external_append = " file://SUPPORTED"
-
+# Bypass stashing locale files, as we grab those directly
 stash_locale_cleanup_tcmode-external () {
     :
 }

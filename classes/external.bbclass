@@ -24,6 +24,8 @@
 # LIC_FILES_CHKSUM, so use the license from common-licenses
 inherit common_license
 
+LIC_FILES_CHKSUM_tcmode-external = "${COMMON_LIC_CHKSUM}"
+
 # Save files lists for recipes
 inherit recipefiles
 
@@ -78,15 +80,13 @@ EXTERNAL_ENABLED_tcmode-external = "1"
 
 PR_append_tcmode-external = ".external"
 
-LIC_FILES_CHKSUM_tcmode-external = "${COMMON_LIC_CHKSUM}"
+# Exclude default sources
+SRC_URI_tcmode-external = ""
+SRCPV_tcmode-external = ""
 
 # We don't extract anything which will create S, and we don't want to see the
 # warning about it
 S_tcmode-external = "${WORKDIR}"
-
-# Exclude default sources
-SRC_URI_tcmode-external = ""
-SRCPV_tcmode-external = ""
 
 # Toolchain shipped binaries weren't necessarily built ideally
 INSANE_SKIP_${PN}_append_tcmode-external = " ldflags textrel"
@@ -97,35 +97,8 @@ INSANE_SKIP_${PN}_append_tcmode-external = " already-stripped"
 # Missing build deps don't matter when we don't build anything
 INSANE_SKIP_${PN}_append_tcmode-external = " build-deps"
 
-def read_files_from_pkgdata(pkgdatafile, long=False):
-    import json
-    with open(pkgdatafile, 'r') as f:
-        found = False
-        for line in f:
-            if line.startswith('FILES_INFO:'):
-                found = True
-                val = line.split(':', 1)[1].strip()
-                dictval = json.loads(val)
-                return sorted(dictval)
-
-def import_from_filename(module_name, file_path):
-    import importlib.util
-    import sys
-
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    if spec is not None:
-        module = importlib.util.module_from_spec(spec)
-    else:
-        # Assumption
-        loader = importlib.machinery.SourceFileLoader(module_name, file_path)
-        module = loader.load_module()
-    sys.modules[module_name] = module
-    return module
-
 EXCLUDED_EXTERNAL_FILES += "\
     ${sysconfdir}/default/volatiles \
-"
-EXCLUDED_EXTERNAL_FILES += "\
     .*\.debug \
     ${prefix}/src/debug \
 "
