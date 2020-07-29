@@ -1,8 +1,5 @@
 inherit external_cross
 
-#DEPENDS_tcmode-external = "virtual/${TARGET_PREFIX}binutils ${EXTRADEPENDS}"
-#RDEPENDS_${PN}_append_tcmode-external = " libgcc glibc"
-
 gcc_binaries = "gcc gcc-${PV} \
                 gcc-ar gcc-nm gcc-ranlib cc gcov gcov-tool c++ g++ cpp gfortran"
 EXTERNAL_CROSS_BINARIES = "${gcc_binaries}"

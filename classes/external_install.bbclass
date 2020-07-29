@@ -43,19 +43,10 @@ fakeroot python do_install_external() {
     if d.getVar('do_install_extra'):
         bb.build.exec_func('do_install_extra', d)
 }
-do_install_external[cleandirs] = "${D}"
 
 python () {
     if d.getVar('EXTERNAL_ENABLED') == '1':
         d.setVar('do_install', d.getVar('do_install_external', False))
         d.setVarFlag('do_install', 'deps', ['do_fetch', 'do_unpack'])
         d.setVarFlag('do_install', 'python', '1')
-
-        # Used when do_install_external is run as a separate task
-        #d.appendVarFlag('do_install', 'depends', 'virtual/fakeroot-native:do_populate_sysroot')
-        #d.delVarFlag('do_install', 'cleandirs')
-
-        # We aren't building or configuring, but we don't want to completely disable DEPENDS or sysroot availability
-        # This does mean the existing DEPENDS will be obeyed even though we need none of it, however.
-        #bb.build.addtask('do_install', '', 'do_prepare_recipe_sysroot', d)
 }
