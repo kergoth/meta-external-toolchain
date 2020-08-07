@@ -6,7 +6,7 @@ python external_install () {
     from collections import defaultdict
     from pathlib import Path
 
-    files = load_recipefiles(d)
+    files = load_recipefiles(d.getVar('RECIPEFILES_PATH'))
 
     by_dirname = defaultdict(set)
     for f in files:
