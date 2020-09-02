@@ -2,12 +2,10 @@
 # TODO: write the sdk processing hook to emit recipefiles into the sdk. it
 # should be enabled alongside emitting TUNE_PKGARCH, etc. Possibly a specific
 # class or recipe for enabling/emitting external-compatible sdks.
-#
 # TODO: add a flag to allow use of variable references in the files lists, to
 # be used in heuristic-mode operation
 # TODO: add flag to make all files in the recipefiles optional
 # TODO: add variable to control which files are optional, ex. *.a, .debug
-#
 # TODO: add logic to skip external if components are missing, but 1) this
 # shouldn't be done for the main components, and 2) doing so requires the
 # recipe to reparse when the external files and/or version change, so use of
@@ -19,100 +17,109 @@
 # add every external file path to our file-checksums.
 # I'd really like to avoid adding all the files to the checksums, and I'd like
 # to avoid getting versions too if possible, but it doesn't seem viable.
+# TODO: consider parsing an external metadata file with PV, LICENSE, then have
+# the heuristic variant pull those via other means only if it's not available.
+
+# Configuration to use external toolchain
+EXTERNAL_TOOLCHAIN ??= "UNDEFINED"
+# TODO: convert to EXTERNAL_TARGET_PREFIX
+EXTERNAL_TARGET_SYS ??= "${TARGET_ARCH}-${TARGET_OS}"
+EXTERNAL_TOOLCHAIN_BIN ??= "${EXTERNAL_TOOLCHAIN}/bin"
+
+# We don't care if this path references other variables
+EXTERNAL_TOOLCHAIN[vardepvalue] = "${EXTERNAL_TOOLCHAIN}"
+
+# External toolchain features.
+#
+#   locale-utf8-is-default: assume en_US is utf8, not en_US.UTF-8, as is the
+#                           case for OE.
+#   all-files-optional: make a failure to find files non-fatal
+#   use-files-mirrors: check alternate paths for files using defined mirrors
+EXTERNAL_TOOLCHAIN_FEATURES ??= ""
+
+python () {
+    oe.utils.features_backfill("EXTERNAL_TOOLCHAIN_FEATURES", d)
+}
+
+EXTERNAL_TOOLCHAIN_SYSROOT ??= "${@external_run(d, d.getVar('EXTERNAL_CC'), *(TARGET_CC_ARCH.split() + ['-print-sysroot'])).rstrip()}"
+EXTERNAL_TOOLCHAIN_LIBROOT ??= "${@external_run(d, d.getVar('EXTERNAL_CC'), *(TARGET_CC_ARCH.split() + ['-print-file-name=crtbegin.o'])).rstrip().replace('/crtbegin.o', '')}"
+EXTERNAL_LIBC_KERNEL_VERSION ??= "${@external_get_kernel_version("${EXTERNAL_TOOLCHAIN_SYSROOT}${prefix}")}"
+
+EXTERNAL_CC ??= "${EXTERNAL_TARGET_SYS}-gcc"
+
+def external_run(d, *args):
+    """Convenience wrapper"""
+    if (not d.getVar('TCMODE', True).startswith('external') or
+            not d.getVar('EXTERNAL_TOOLCHAIN', True)):
+        return 'UNKNOWN'
+
+    sys.path.append(os.path.join(d.getVar('LAYERDIR_meta-external', True), 'lib'))
+    import oe.external
+    return oe.external.run(d, *args)
+
+def external_get_kernel_version(p):
+    import re
+    for fn in ['include/linux/utsrelease.h', 'include/generated/utsrelease.h',
+               'include/linux/version.h']:
+        fn = os.path.join(p, fn)
+        if os.path.exists(fn):
+            break
+    else:
+        return ''
+
+    try:
+        f = open(fn)
+    except IOError:
+        pass
+    else:
+        with f:
+            lines = f.readlines()
+
+        for line in lines:
+            m = re.match(r'#define LINUX_VERSION_CODE (\d+)$', line)
+            if m:
+                code = int(m.group(1))
+                a = code >> 16
+                b = (code >> 8) & 0xFF
+                return '%d.%d' % (a, b)
+
+    return ''
 
 # Since these are prebuilt binaries, there are no source files to checksum for
 # LIC_FILES_CHKSUM, so use the license from common-licenses
 inherit common_license
 
-LIC_FILES_CHKSUM_tcmode-external = "${COMMON_LIC_CHKSUM}"
+LIC_FILES_CHKSUM_tcmode-external_class-target = "${COMMON_LIC_CHKSUM}"
+LIC_FILES_CHKSUM_tcmode-external_class-cross = "${COMMON_LIC_CHKSUM}"
 
 # Save files lists for recipes
 inherit recipefiles
 
-# Disable systemd service files which we don't have. This generally occurs when
-# a recipe emits binary packages which include service files, but those packages
-# aren't included in the particular sdk we're using.
-PACKAGESPLITFUNCS_prepend = "external_systemd_adjust "
-
-python external_systemd_adjust () {
-    if not bb.utils.contains('DISTRO_FEATURES', 'systemd', True, False, d):
-        return
-    if not bb.data.inherits_class('systemd', d):
-        return
-    systemd_packages = d.getVar('SYSTEMD_PACKAGES')
-    if not systemd_packages:
-        return
-
-    def get_package_var(d, var, pkg):
-        val = (d.getVar('%s_%s' % (var, pkg)) or "").strip()
-        if val == "":
-            val = (d.getVar(var) or "").strip()
-        return val
-
-    searchpaths = [oe.path.join(d.getVar("sysconfdir"), "systemd", "system"),]
-    searchpaths.append(d.getVar("systemd_system_unitdir"))
-
-    for pkg_systemd in systemd_packages.split():
-        for service in get_package_var(d, 'SYSTEMD_SERVICE', pkg_systemd).split():
-            # Deal with adding, for example, 'ifplugd@eth0.service' from
-            # 'ifplugd@.service'
-            base = None
-            at = service.find('@')
-            if at != -1:
-                ext = service.rfind('.')
-                base = service[:at] + '@' + service[ext:]
-
-            for path in searchpaths:
-                if os.path.exists(oe.path.join(d.getVar("D"), path, service)):
-                    break
-                elif base is not None:
-                    if os.path.exists(oe.path.join(d.getVar("D"), path, base)):
-                        break
-            else:
-                d.setVar('SYSTEMD_SERVICE_%s_remove' % pkg_systemd, service)
-                d.setVar('SYSTEMD_SERVICE_remove', service)
-}
-
 RECIPEFILES_DIR ?= "${EXTERNAL_TOOLCHAIN}/recipefiles"
 
 EXTERNAL_ENABLED = ""
-EXTERNAL_ENABLED_tcmode-external = "1"
+EXTERNAL_ENABLED_tcmode-external_class-target = "1"
+EXTERNAL_ENABLED_tcmode-external_class-cross = "1"
 
-PR_append_tcmode-external = ".external"
+PR_append_tcmode-external_class-target = ".external"
+PR_append_tcmode-external_class-cross = ".external"
 
 # Exclude default sources
-SRC_URI_tcmode-external = ""
-SRCPV_tcmode-external = ""
-
-# We don't extract anything which will create S, and we don't want to see the
-# warning about it
-S_tcmode-external = "${WORKDIR}"
-
-# Toolchain shipped binaries weren't necessarily built ideally
-INSANE_SKIP_${PN}_append_tcmode-external = " ldflags textrel"
-
-# Debug files may well have already been split out, or stripped out
-INSANE_SKIP_${PN}_append_tcmode-external = " already-stripped"
-
-# Missing build deps don't matter when we don't build anything
-INSANE_SKIP_${PN}_append_tcmode-external = " build-deps"
-
-EXCLUDED_EXTERNAL_FILES += "\
-    ${sysconfdir}/default/volatiles \
-    .*\.debug \
-    ${prefix}/src/debug \
-"
-
-# Packaging requires objcopy/etc for split and strip
-PACKAGE_DEPENDS_append_tcmode-external = " virtual/${MLPREFIX}${TARGET_PREFIX}binutils"
+SRC_URI_tcmode-external_class-target = ""
+SRC_URI_tcmode-external_class-cross = ""
+SRCPV_tcmode-external_class-target = ""
+SRCPV_tcmode-external_class-cross = ""
 
 NOEXEC_TASKS = ""
-NOEXEC_TASKS_tcmode-external = "do_patch do_configure do_compile"
+NOEXEC_TASKS_tcmode-external_class-target = "do_patch do_configure do_compile"
+NOEXEC_TASKS_tcmode-external_class-cross = "do_patch do_configure do_compile"
 
 python () {
-    for task in d.getVar('NOEXEC_TASKS').split():
-        d.setVarFlag(task, 'noexec', '1')
+    if d.getVar('EXTERNAL_ENABLED'):
+        for task in d.getVar('NOEXEC_TASKS').split():
+            d.setVarFlag(task, 'noexec', '1')
 }
 
 # We don't want to interact with the gcc stashed builddir
-COMPILERDEP_tcmode-external = ""
+COMPILERDEP_tcmode-external_class-target = ""
+COMPILERDEP_tcmode-external_class-cross = ""

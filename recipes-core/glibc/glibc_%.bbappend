@@ -1,12 +1,16 @@
 inherit external_install
 
 # Bypass stashing locale files, as we grab those directly
-stash_locale_cleanup_tcmode-external () {
-    :
-}
+# stash_locale_cleanup_tcmode-external () {
+#     :
+# }
 
-do_stash_locale_tcmode-external () {
-    :
+# do_stash_locale_tcmode-external () {
+#     :
+# }
+
+do_install_extra () {
+    install -d ${D}${datadir}
 }
 
 # Save the recipefiles list excluding the stashed locale files
